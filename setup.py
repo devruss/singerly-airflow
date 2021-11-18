@@ -17,7 +17,7 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
     ],
     package_dir={"": "src"},
-    packages=setuptools.find_packages(where="src"),
+    packages=setuptools.find_packages(),
     install_required=['boto3'],
     python_requires=">=3.6",
 )
