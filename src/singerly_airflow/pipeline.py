@@ -1,8 +1,9 @@
 import subprocess
+from typing import List
 import boto3
-import json
 import os
 from dataclasses import dataclass
+from singerly_airflow.utils import timed_lru_cache
 from singerly_airflow.venv import Venv
 
 @dataclass
@@ -79,7 +80,8 @@ def get_pipeline(id: str) -> Pipeline:
   return Pipeline(**pipeline_raw)
 
 
-def get_pipelines(project_id: str) -> Pipeline:
+@timed_lru_cache(seconds=30)
+def get_pipelines(project_id: str) -> List[Pipeline]:
   dynamodb = boto3.resource('dynamodb')
   table = dynamodb.Table(project_id)
   result = table.scan()
