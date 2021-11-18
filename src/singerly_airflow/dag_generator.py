@@ -22,6 +22,6 @@ def build_dag(pipeline: Pipeline) -> DAG:
     start >> singerly_task >> end
   return dag
 
-def build_dags(company_id: str):
-  for pipeline in get_pipelines('test_pipeline'):
+def build_dags(project_id: str):
+  for pipeline in get_pipelines(project_id):
     globals()[pipeline.id] = build_dag(pipeline=pipeline)
