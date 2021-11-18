@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: singerly-airflow
+Version: 0.0.1
+Summary: Singerly Airflow Operator and DAG generator package
+Home-page: https://github.com/pypa/sampleproject
+Author: Singerly
+Author-email: noreply@singerly.co
+License: UNKNOWN
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+
+# Singerly Airflow Operator & DAG Generator Package
+
+

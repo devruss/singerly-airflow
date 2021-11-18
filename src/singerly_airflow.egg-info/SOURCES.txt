@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+setup.py
+src/singerly_airflow/__init__.py
+src/singerly_airflow/operator.py
+src/singerly_airflow/pipeline.py
+src/singerly_airflow/venv.py
+src/singerly_airflow.egg-info/PKG-INFO
+src/singerly_airflow.egg-info/SOURCES.txt
+src/singerly_airflow.egg-info/dependency_links.txt
+src/singerly_airflow.egg-info/top_level.txt
