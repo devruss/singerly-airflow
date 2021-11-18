@@ -3,7 +3,7 @@ import boto3
 import json
 import os
 from dataclasses import dataclass
-from .venv import Venv
+from singerly_airflow.venv import Venv
 
 @dataclass
 class Pipeline:

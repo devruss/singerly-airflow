@@ -1,6 +1,6 @@
 from airflow.models.baseoperator import BaseOperator
 from airflow.models.taskinstance import Context
-from .pipeline import execute_pipeline, get_pipeline
+from singerly_airflow.pipeline import execute_pipeline, get_pipeline
 import boto3
 
 class SingerlyOperator(BaseOperator):
