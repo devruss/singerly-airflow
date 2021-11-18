@@ -16,7 +16,7 @@ default_args = {'owner': 'airflow',
 def build_dag(pipeline: Pipeline) -> DAG:
   dag = DAG(dag_id=pipeline.id, schedule_interval='@daily', default_args=default_args)
   with dag:
-    singerly_task = SingerlyOperator(pipeline_id=pipeline.id)
+    singerly_task = SingerlyOperator(task_id=pipeline.name, pipeline_id=pipeline.id)
     start = DummyOperator(task_id="Start")
     end = DummyOperator(task_id="End")
     start >> singerly_task >> end
