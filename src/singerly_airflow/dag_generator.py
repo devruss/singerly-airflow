@@ -24,4 +24,4 @@ def build_dag(pipeline: Pipeline) -> DAG:
 
 def build_dags(project_id: str):
   for pipeline in get_pipelines(project_id):
-    globals()[pipeline.id] = build_dag(pipeline=pipeline)
+    globals()[pipeline.id] = build_dag(pipeline)
