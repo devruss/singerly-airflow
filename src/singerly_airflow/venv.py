@@ -27,9 +27,10 @@ class Venv:
     subprocess.run([self.python_bin, '-m', 'venv', self.name], stdout=None, stderr=None)
 
   def install_package(self, package_url):
-    package_install = subprocess.run([self.pip_bin, 'install', package_url])
+    package_install = subprocess.run([self.pip_bin, 'install', package_url], capture_output=True, text=True)
     if package_install.returncode != 0:
-      raise VenvPackageInstallException(package_install.stderr.decode('utf-8'))
+      print(package_install.stderr, package_install.stdout)
+      raise VenvPackageInstallException()
 
   def get_bin_dir(self) -> str:
     return f'{os.getcwd()}/{self.name}/bin'
