@@ -12,6 +12,7 @@ class VenvPackageInstallException(Exception):
 
 class Venv:
   def __init__(self, name: str, package_url: str = ''):
+    os.chdir('/var/run')
     self.name = name
     python_check = subprocess.run(['which', 'python3'], capture_output=True, text=True)
     if python_check.returncode != 0:
@@ -28,7 +29,7 @@ class Venv:
   def install_package(self, package_url):
     package_install = subprocess.run([self.pip_bin, 'install', package_url])
     if package_install.returncode != 0:
-      raise VenvPackageInstallException()
+      raise VenvPackageInstallException(package_install.stderr.decode('utf-8'))
 
   def get_bin_dir(self) -> str:
     return f'{os.getcwd()}/{self.name}/bin'
