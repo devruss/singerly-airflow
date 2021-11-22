@@ -35,6 +35,7 @@ class Pipeline:
   def execute(self) -> None:
     if not self.is_valid():
       return
+    os.chdir('/var/run')
     tap_venv = Venv('tap', package_url=self.tap_url)
     target_venv = Venv('target', package_url=self.target_url)
     with open(f'{os.getcwd()}/tap_config.json', 'w') as tap_config_file:
