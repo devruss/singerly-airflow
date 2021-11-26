@@ -41,7 +41,7 @@ class Pipeline:
     tap_run_args = [
       f'{tap_venv.get_bin_dir()}/{self.get_package_name(self.tap_url)}',
       '-c', 'tap_config.json',
-      '--discovery'
+      '--discover'
     ]
     tap_process = subprocess.Popen(tap_run_args, stdout=subprocess.PIPE)
     stdout = tap_process.communicate()[0]
