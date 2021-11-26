@@ -48,6 +48,7 @@ class Pipeline:
     self.save_catalog(stdout.decode('utf-8'))
 
   def save_catalog(self, catalog: str):
+    self.catalog = catalog;
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table(self.project_id)
     table.update_item(
