@@ -11,8 +11,8 @@ class VenvPackageInstallException(Exception):
 
 
 class Venv:
-  def __init__(self, name: str, package_url: str = ''):
-    os.chdir('/var/run')
+  def __init__(self, name: str, package_url: str = '', work_dir='/var/run'):
+    os.chdir(work_dir)
     self.name = name
     python_check = subprocess.run(['which', 'python3'], capture_output=True, text=True)
     if python_check.returncode != 0:

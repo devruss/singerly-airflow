@@ -35,7 +35,7 @@ class Pipeline:
 
   def generate_catalog(self):
     os.chdir('/tmp')
-    tap_venv = Venv('tap', package_url=self.tap_url)
+    tap_venv = Venv('tap', package_url=self.tap_url, work_dir='/tmp')
     with open(f'{os.getcwd()}/tap_config.json', 'w') as tap_config_file:
       tap_config_file.write(self.tap_config)
     tap_run_args = [
