@@ -13,7 +13,7 @@ class Pipeline:
   tap_config: str
   tap_url: str
   target_url: str
-  catalog: str
+  tap_catalog: str
   pipeline_state: str
   project_id: str
 
@@ -48,14 +48,14 @@ class Pipeline:
     self.save_catalog(stdout.decode('utf-8'))
 
   def save_catalog(self, catalog: str):
-    self.catalog = catalog;
+    self.tap_catalog = catalog;
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table(self.project_id)
     table.update_item(
         Key={
             'id': self.id,
         },
-        UpdateExpression="set catalog = :catalog",
+        UpdateExpression="set tap_catalog = :catalog",
         ExpressionAttributeValues={
             ':catalog': catalog,
         },
@@ -70,7 +70,7 @@ class Pipeline:
     with open(f'{os.getcwd()}/tap_config.json', 'w') as tap_config_file:
       tap_config_file.write(self.tap_config)
     with open(f'{os.getcwd()}/catalog.json', 'w') as catalog_file:
-      catalog_file.write(self.catalog)
+      catalog_file.write(self.tap_catalog)
     tap_run_args = [
       f'{tap_venv.get_bin_dir()}/{self.get_package_name(self.tap_url)}',
       '-c', 'tap_config.json',
