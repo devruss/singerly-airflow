@@ -15,6 +15,7 @@ class Pipeline:
   target_url: str
   catalog: str
   pipeline_state: str
+  project_id: str
 
   def save_state(self, state: str) -> None:
     dynamodb = boto3.resource('dynamodb')
@@ -31,6 +32,33 @@ class Pipeline:
 
   def get_package_name(self, package_url) -> str:
     return package_url.split('/')[-1].replace('.git', '')
+
+  def generate_catalog(self):
+    os.chdir('/tmp')
+    tap_venv = Venv('tap', package_url=self.tap_url)
+    with open(f'{os.getcwd()}/tap_config.json', 'w') as tap_config_file:
+      tap_config_file.write(self.tap_config)
+    tap_run_args = [
+      f'{tap_venv.get_bin_dir()}/{self.get_package_name(self.tap_url)}',
+      '-c', 'tap_config.json',
+      '--discovery'
+    ]
+    tap_process = subprocess.Popen(tap_run_args, stdout=subprocess.PIPE)
+    stdout = tap_process.communicate()[0]
+    self.save_catalog(stdout.decode('utf-8'))
+
+  def save_catalog(self, catalog: str):
+    dynamodb = boto3.resource('dynamodb')
+    table = dynamodb.Table(self.project_id)
+    table.update_item(
+        Key={
+            'id': self.id,
+        },
+        UpdateExpression="set catalog = :catalog",
+        ExpressionAttributeValues={
+            ':catalog': catalog,
+        },
+    )
 
   def execute(self) -> None:
     if not self.is_valid():
@@ -72,13 +100,13 @@ class Pipeline:
     )
 
 
-def get_pipeline(id: str) -> Pipeline:
+def get_pipeline(project_id: str, id: str) -> Pipeline:
   dynamodb = boto3.resource('dynamodb')
-  table = dynamodb.Table('test-pipeline')
+  table = dynamodb.Table(project_id)
   pipeline_raw = table.get_item(Key={
     'id': id
   })['Item']
-  return Pipeline(**pipeline_raw)
+  return Pipeline(project_id=project_id, **pipeline_raw)
 
 
 @timed_lru_cache(seconds=30)
@@ -86,4 +114,4 @@ def get_pipelines(project_id: str) -> List[Pipeline]:
   dynamodb = boto3.resource('dynamodb')
   table = dynamodb.Table(project_id)
   result = table.scan()
-  return [Pipeline(**pipeline_raw) for pipeline_raw in result['Items']]
+  return [Pipeline(project_id=project_id, **pipeline_raw) for pipeline_raw in result['Items']]
