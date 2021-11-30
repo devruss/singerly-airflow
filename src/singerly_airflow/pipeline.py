@@ -13,6 +13,7 @@ class Pipeline:
   tap_config: str
   tap_url: str
   target_url: str
+  target_config: str
   tap_catalog: str
   pipeline_state: str
   project_id: str
@@ -69,6 +70,8 @@ class Pipeline:
     target_venv = Venv('target', package_url=self.target_url)
     with open(f'{os.getcwd()}/tap_config.json', 'w') as tap_config_file:
       tap_config_file.write(self.tap_config)
+    with open(f'{os.getcwd()}/target_config.json', 'w') as target_config_file:
+      target_config_file.write(self.target_config)
     with open(f'{os.getcwd()}/catalog.json', 'w') as catalog_file:
       catalog_file.write(self.tap_catalog)
     tap_run_args = [
@@ -80,13 +83,18 @@ class Pipeline:
       with open(f'{os.getcwd()}/tap_state.json', 'w') as tap_state_file:
         tap_state_file.write(self.pipeline_state)
       tap_run_args.extend(['-s', 'tap_state.json'])
+    target_run_args = [
+      f'{target_venv.get_bin_dir()}/{self.get_package_name(self.target_url)}'
+      '-c', 'target_config.json',
+    ]
     tap_process = subprocess.Popen(tap_run_args, stdout=subprocess.PIPE)
-    target_process = subprocess.Popen([f'{target_venv.get_bin_dir()}/{self.get_package_name(self.target_url)}'], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    target_process = subprocess.Popen(target_run_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
 
     while True:
       next_line = tap_process.stdout.readline()
       if not next_line:
         break
+      print(next_line.decode('utf-8'))
       target_process.stdin.write(next_line)
     
     stdout = target_process.communicate()[0]
