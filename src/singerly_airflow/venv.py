@@ -30,7 +30,7 @@ class Venv:
     package_install = subprocess.run([self.pip_bin, 'install', package_url], capture_output=True, text=True)
     if package_install.returncode != 0:
       print(package_install.stderr, package_install.stdout)
-      raise VenvPackageInstallException()
+      raise VenvPackageInstallException(package_install.stderr)
 
   def get_bin_dir(self) -> str:
     return f'{os.getcwd()}/{self.name}/bin'
