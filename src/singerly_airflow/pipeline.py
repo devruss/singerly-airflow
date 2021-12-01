@@ -17,6 +17,8 @@ class Pipeline:
   tap_catalog: str
   pipeline_state: str
   project_id: str
+  tap_executable: str = ''
+  target_executable: str = ''
 
   def save_state(self, state: str) -> None:
     dynamodb = boto3.resource('dynamodb')
@@ -34,13 +36,23 @@ class Pipeline:
   def get_package_name(self, package_url) -> str:
     return package_url.split('/')[-1].replace('.git', '')
 
+  def get_tap_executable(self) -> str:
+    if self.tap_executable:
+      return self.tap_executable
+    return self.get_package_name(package_url=self.tap_url)
+
+  def get_target_executable(self) -> str:
+    if self.target_executable:
+      return self.target_executable
+    return self.get_package_name(package_url=self.target_url)
+
   def generate_catalog(self):
     os.chdir('/tmp')
     tap_venv = Venv('tap', package_url=self.tap_url, work_dir='/tmp')
     with open(f'{os.getcwd()}/tap_config.json', 'w') as tap_config_file:
       tap_config_file.write(self.tap_config)
     tap_run_args = [
-      f'{tap_venv.get_bin_dir()}/{self.get_package_name(self.tap_url)}',
+      f'{tap_venv.get_bin_dir()}/{self.get_tap_executable()}',
       '-c', 'tap_config.json',
       '--discover'
     ]
@@ -75,7 +87,7 @@ class Pipeline:
     with open(f'{os.getcwd()}/catalog.json', 'w') as catalog_file:
       catalog_file.write(self.tap_catalog)
     tap_run_args = [
-      f'{tap_venv.get_bin_dir()}/{self.get_package_name(self.tap_url)}',
+      f'{tap_venv.get_bin_dir()}/{self.get_tap_executable()}',
       '-c', 'tap_config.json',
       '-p', 'catalog.json'
     ]
@@ -84,7 +96,7 @@ class Pipeline:
         tap_state_file.write(self.pipeline_state)
       tap_run_args.extend(['-s', 'tap_state.json'])
     target_run_args = [
-      f'{target_venv.get_bin_dir()}/{self.get_package_name(self.target_url)}'
+      f'{target_venv.get_bin_dir()}/{self.get_target_executable()}'
       '-c', 'target_config.json',
     ]
     tap_process = subprocess.Popen(tap_run_args, stdout=subprocess.PIPE)
