@@ -20,6 +20,7 @@ class Pipeline:
   tap_executable: str = ''
   target_executable: str = ''
   email_list: str = ''
+  is_enabled: bool = False
 
   def save_state(self, state: str) -> None:
     dynamodb = boto3.resource('dynamodb')
