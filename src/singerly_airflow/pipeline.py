@@ -19,6 +19,7 @@ class Pipeline:
   project_id: str
   tap_executable: str = ''
   target_executable: str = ''
+  email_list: str = ''
 
   def save_state(self, state: str) -> None:
     dynamodb = boto3.resource('dynamodb')
@@ -32,6 +33,11 @@ class Pipeline:
         ':state': state
       }
     )
+
+  def get_email_list(self):
+    if not self.email_list:
+      return []
+    return [email.strip() for email in self.email_list.split(',')]
 
   def get_package_name(self, package_url) -> str:
     return package_url.split('/')[-1].replace('.git', '')

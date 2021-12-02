@@ -10,11 +10,14 @@ default_args = {'owner': 'airflow',
                   'start_date': dates.days_ago(1),
                   'depends_on_past': False,
                   'retries': 1,
+                  'email_on_failure': True,
+                  'email_on_retry': True,
+                  'email_on_success': True,
                   'retry_delay': datetime.timedelta(hours=5)
                   }
 
 def build_dag(pipeline: Pipeline) -> DAG:
-  dag = DAG(dag_id=pipeline.id, schedule_interval='@daily', default_args=default_args)
+  dag = DAG(dag_id=pipeline.id, schedule_interval='@daily', default_args=default_args, email=pipeline.get_email_list())
   with dag:
     singerly_task = SingerlyOperator(task_id=pipeline.name, pipeline_id=pipeline.id)
     start = DummyOperator(task_id="Start")
