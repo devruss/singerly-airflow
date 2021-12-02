@@ -24,7 +24,7 @@ class Pipeline:
 
   def save_state(self, state: str) -> None:
     dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table('test-pipeline')
+    table = dynamodb.Table(self.project_id)
     table.update_item(
       Key={
         'id': self.id,
@@ -128,6 +128,7 @@ class Pipeline:
     )
 
 
+@timed_lru_cache(seconds=30)
 def get_pipeline(project_id: str, id: str) -> Pipeline:
   dynamodb = boto3.resource('dynamodb')
   table = dynamodb.Table(project_id)
