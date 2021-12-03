@@ -17,10 +17,12 @@ class Pipeline:
   tap_catalog: str
   pipeline_state: str
   project_id: str
+  schedule: str
   tap_executable: str = ''
   target_executable: str = ''
   email_list: str = ''
   is_enabled: bool = False
+  schedule: str = '@dayli'
 
   def save_state(self, state: str) -> None:
     dynamodb = boto3.resource('dynamodb')

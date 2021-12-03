@@ -19,7 +19,7 @@ default_args = {'owner': 'airflow',
 def build_dag(pipeline: Pipeline) -> DAG:
   dag = DAG(
     dag_id=pipeline.id,
-    schedule_interval='@daily',
+    schedule_interval=pipeline.schedule,
     default_args={**default_args, 'email': pipeline.get_email_list()},
     is_paused_upon_creation=(not pipeline.is_enabled)
     )
