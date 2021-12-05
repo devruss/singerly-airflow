@@ -42,8 +42,10 @@ class Pipeline:
       return []
     return [email.strip() for email in self.email_list.split(',')]
 
-  def get_package_name(self, package_url) -> str:
-    return package_url.split('/')[-1].replace('.git', '')
+  def get_package_name(self, package_url: str) -> str:
+    if (package_url.endswith('.git') or package_url.startswith('git+')):
+      return package_url.split('/')[-1].replace('.git', '')
+    return package_url;
 
   def get_tap_executable(self) -> str:
     if self.tap_executable:
@@ -87,7 +89,9 @@ class Pipeline:
     if not self.is_valid():
       return
     os.chdir('/var/run')
+    print(f'Installing source connector: {self.get_package_name(self.tap_url)}')
     tap_venv = Venv('tap', package_url=self.tap_url)
+    print(f'Installing destination connector: {self.get_package_name(self.target_url)}')
     target_venv = Venv('target', package_url=self.target_url)
     with open(f'{os.getcwd()}/tap_config.json', 'w') as tap_config_file:
       tap_config_file.write(self.tap_config)
@@ -108,6 +112,7 @@ class Pipeline:
       f'{target_venv.get_bin_dir()}/{self.get_target_executable()}'
       '-c', 'target_config.json',
     ]
+    print('Starting pipeline execution')
     tap_process = subprocess.Popen(tap_run_args, stdout=subprocess.PIPE)
     target_process = subprocess.Popen(target_run_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
 
