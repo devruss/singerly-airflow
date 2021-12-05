@@ -1,18 +1,42 @@
 import datetime
+from multiprocessing import Pipe
 from airflow.utils import dates
+from airflow.utils.email import send_email_smtp
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from singerly_airflow.pipeline import Pipeline, get_pipelines
 from singerly_airflow.operator import SingerlyOperator
 
+def send_email_alert(pipeline: Pipeline):
+  def failure_callback(context):
+    # task_instance = context['task_instance']
+    pass
+  def success_callback(context):
+    subject = "[Airflow] DAG {0} - Task {1}: Success".format(
+      context['task_instance_key_str'].split('__')[0],
+      context['task_instance_key_str'].split('__')[1]
+    )
+    html_content = """
+    DAG: {0}<br>
+    Task: {1}<br>
+    Succeeded on: {2}
+    """.format(
+      context['task_instance_key_str'].split('__')[0],
+      context['task_instance_key_str'].split('__')[1],
+      datetime.now()
+      )
+    send_email_smtp(pipeline.get_email_list() , subject, html_content)
+  return (failure_callback, success_callback)
+
+
 
 default_args = {'owner': 'airflow',
-                  'start_date': dates.days_ago(1),
+                  'start_date': dates.days_ago(0),
                   'depends_on_past': False,
                   'retries': 1,
                   'email_on_failure': True,
                   'email_on_retry': True,
-                  'email_on_success': True,
+                  'email_on_success': False,
                   'retry_delay': datetime.timedelta(hours=5)
                   }
 
@@ -21,6 +45,7 @@ def build_dag(pipeline: Pipeline) -> DAG:
     dag_id=pipeline.id,
     schedule_interval=pipeline.schedule,
     max_active_runs=1,
+    on_success_callback=send_email_alert(pipeline=pipeline)[1],
     default_args={**default_args, 'email': pipeline.get_email_list()},
     is_paused_upon_creation=(not pipeline.is_enabled)
     )
