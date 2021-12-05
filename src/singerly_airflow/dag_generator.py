@@ -20,6 +20,7 @@ def build_dag(pipeline: Pipeline) -> DAG:
   dag = DAG(
     dag_id=pipeline.id,
     schedule_interval=pipeline.schedule,
+    max_active_runs=1,
     default_args={**default_args, 'email': pipeline.get_email_list()},
     is_paused_upon_creation=(not pipeline.is_enabled)
     )
