@@ -109,7 +109,7 @@ class Pipeline:
         tap_state_file.write(self.pipeline_state)
       tap_run_args.extend(['-s', 'tap_state.json'])
     target_run_args = [
-      f'{target_venv.get_bin_dir()}/{self.get_target_executable()}'
+      f'{target_venv.get_bin_dir()}/{self.get_target_executable()}',
       '-c', 'target_config.json',
     ]
     print('Starting pipeline execution', tap_run_args, target_run_args)
