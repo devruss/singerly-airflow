@@ -112,7 +112,7 @@ class Pipeline:
       f'{target_venv.get_bin_dir()}/{self.get_target_executable()}'
       '-c', 'target_config.json',
     ]
-    print('Starting pipeline execution')
+    print('Starting pipeline execution', tap_run_args, target_run_args)
     tap_process = subprocess.Popen(tap_run_args, stdout=subprocess.PIPE)
     target_process = subprocess.Popen(target_run_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
 
