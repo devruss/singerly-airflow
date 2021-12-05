@@ -125,7 +125,7 @@ class Pipeline:
   def is_valid(self) -> bool:
     return (self.tap_config
       and self.tap_url
-      and self.catalog
+      and self.tap_catalog
       and self.target_url
     )
 

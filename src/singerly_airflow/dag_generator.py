@@ -25,9 +25,7 @@ def build_dag(pipeline: Pipeline) -> DAG:
     )
   with dag:
     singerly_task = SingerlyOperator(task_id=pipeline.name, pipeline_id=pipeline.id)
-    start = DummyOperator(task_id="Start")
-    end = DummyOperator(task_id="End")
-    start >> singerly_task >> end
+    singerly_task
   return dag
 
 def build_dags(project_id: str, globals):
