@@ -36,7 +36,7 @@ default_args = {'owner': 'airflow',
                   'retries': 1,
                   'email_on_failure': True,
                   'email_on_retry': True,
-                  'email_on_success': True,
+                  'email_on_success': False,
                   'retry_delay': datetime.timedelta(hours=5)
                   }
 
@@ -45,19 +45,18 @@ def build_dag(pipeline: Pipeline) -> DAG:
     dag_id=pipeline.id,
     schedule_interval=pipeline.schedule,
     max_active_runs=1,
-    default_args={**default_args, 'email': pipeline.get_email_list(), 'on_success_callback': send_email_alert(pipeline=pipeline)[1]},
+    default_args={**default_args, 'email': pipeline.get_email_list()},
     is_paused_upon_creation=(not pipeline.is_enabled)
     )
   with dag:
-    singerly_task = SingerlyOperator(task_id=pipeline.name, pipeline_id=pipeline.id, on_success_callback=send_email_alert(pipeline=pipeline)[1])
+    singerly_task = SingerlyOperator(task_id=pipeline.name, pipeline_id=pipeline.id)
     email_notification = EmailOperator(task_id="email_notification",
       trigger_rule="all_success",
       to=pipeline.get_email_list(),
-      subject="""[Airflow] DAG {{ task_instance_key_str.split('__')[0] }} - Task {{ task_instance_key_str.split('__')[0] }}: Success""",
+      subject="""[Airflow] DAG {{ task_instance_key_str.split('__')[0] }}: Success""",
       html_content="""
-      DAG: {{ task_instance_key_str.split('__')[0] }}<br>
-      Task: {{ task_instance_key_str.split('__')[1] }}<br>
-      Succeeded on: {{ dag_run.end_date }}
+      DAG: <b>{{ task_instance_key_str.split('__')[0] }}</b><br>
+      Succeeded on: {{ macros.datetime.now() }}
       """)
     singerly_task >> email_notification
   return dag
