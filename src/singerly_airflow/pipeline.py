@@ -88,11 +88,12 @@ class Pipeline:
   def execute(self) -> None:
     if not self.is_valid():
       return
-    os.chdir('/var/run')
+    work_dir = '/tmp'
+    os.chdir(work_dir)
     print(f'Installing source connector: {self.get_package_name(self.tap_url)}')
-    tap_venv = Venv('tap', package_url=self.tap_url)
+    tap_venv = Venv('tap', package_url=self.tap_url, work_dir=work_dir)
     print(f'Installing destination connector: {self.get_package_name(self.target_url)}')
-    target_venv = Venv('target', package_url=self.target_url)
+    target_venv = Venv('target', package_url=self.target_url, work_dir=work_dir)
     with open(f'{os.getcwd()}/tap_config.json', 'w') as tap_config_file:
       tap_config_file.write(self.tap_config)
     with open(f'{os.getcwd()}/target_config.json', 'w') as target_config_file:
