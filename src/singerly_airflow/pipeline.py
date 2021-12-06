@@ -113,7 +113,7 @@ class Pipeline:
       f'{target_venv.get_bin_dir()}/{self.get_target_executable()}',
       '-c', 'target_config.json',
     ]
-    print('Starting pipeline execution', tap_run_args, target_run_args)
+    print(f'Starting pipeline execution {self.get_tap_executable()} -> {self.get_target_executable()}')
     tap_process = subprocess.Popen(tap_run_args, stdout=subprocess.PIPE)
     target_process = subprocess.Popen(target_run_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
 
@@ -121,7 +121,9 @@ class Pipeline:
       next_line = tap_process.stdout.readline()
       if not next_line:
         break
-      print(next_line.decode('utf-8'))
+      decoded_line = next_line.decode('utf-8').strip()
+      if decoded_line:
+        print(decoded_line)
       target_process.stdin.write(next_line)
     
     stdout = target_process.communicate()[0]
