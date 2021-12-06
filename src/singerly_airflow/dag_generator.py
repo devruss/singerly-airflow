@@ -48,7 +48,7 @@ def build_dag(pipeline: Pipeline) -> DAG:
     default_args={**default_args, 'email': pipeline.get_email_list(), 'on_success_callback': send_email_alert(pipeline=pipeline)[1]},
     is_paused_upon_creation=(not pipeline.is_enabled)
     )
-  email_notification = EmailOperator(task_id="Email Notification",
+  email_notification = EmailOperator(task_id="email_notification",
     trigger_rule="all_success",
     to=pipeline.get_email_list(),
     subject="""[Airflow] DAG {{ task_instance_key_str.split('__')[0] }} - Task {{ task_instance_key_str.split('__')[0] }}: Success""",
