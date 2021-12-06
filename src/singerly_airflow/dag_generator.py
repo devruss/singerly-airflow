@@ -1,9 +1,10 @@
 import datetime
 from multiprocessing import Pipe
-from airflow.utils import dates
+from airflow.utils import dates, trigger_rule
 from airflow.utils.email import send_email_smtp
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.email_operator import EmailOperator
 from singerly_airflow.pipeline import Pipeline, get_pipelines
 from singerly_airflow.operator import SingerlyOperator
 
@@ -47,9 +48,18 @@ def build_dag(pipeline: Pipeline) -> DAG:
     default_args={**default_args, 'email': pipeline.get_email_list(), 'on_success_callback': send_email_alert(pipeline=pipeline)[1]},
     is_paused_upon_creation=(not pipeline.is_enabled)
     )
+  email_notification = EmailOperator(task_id="Email Notification",
+    trigger_rule="all_success",
+    to=pipeline.get_email_list(),
+    subject="""[Airflow] DAG {{ task_instance_key_str.split('__')[0] }} - Task {{ task_instance_key_str.split('__')[0] }}: Success""",
+    html_content="""
+    DAG: {{ task_instance_key_str.split('__')[0] }}<br>
+    Task: {{ task_instance_key_str.split('__')[1] }}<br>
+    Succeeded on: {{ datetime.now() }}
+    """)
   with dag:
-    singerly_task = SingerlyOperator(task_id=pipeline.name, pipeline_id=pipeline.id)
-    singerly_task
+    singerly_task = SingerlyOperator(task_id=pipeline.name, pipeline_id=pipeline.id, on_success_callback=send_email_alert(pipeline=pipeline)[1])
+    singerly_task >> email_notification
   return dag
 
 def build_dags(project_id: str, globals):
