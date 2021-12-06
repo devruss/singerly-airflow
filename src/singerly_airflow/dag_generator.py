@@ -45,8 +45,7 @@ def build_dag(pipeline: Pipeline) -> DAG:
     dag_id=pipeline.id,
     schedule_interval=pipeline.schedule,
     max_active_runs=1,
-    on_success_callback=send_email_alert(pipeline=pipeline)[1],
-    default_args={**default_args, 'email': pipeline.get_email_list()},
+    default_args={**default_args, 'email': pipeline.get_email_list(), 'on_success_callback': send_email_alert(pipeline=pipeline)[1]},
     is_paused_upon_creation=(not pipeline.is_enabled)
     )
   with dag:
