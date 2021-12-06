@@ -57,7 +57,7 @@ def build_dag(pipeline: Pipeline) -> DAG:
       html_content="""
       DAG: {{ task_instance_key_str.split('__')[0] }}<br>
       Task: {{ task_instance_key_str.split('__')[1] }}<br>
-      Succeeded on: {{ end_date }}
+      Succeeded on: {{ dag_run.end_date }}
       """)
     singerly_task >> email_notification
   return dag
