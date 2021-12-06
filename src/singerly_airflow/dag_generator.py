@@ -25,9 +25,8 @@ def send_email_alert(pipeline: Pipeline):
       context['task_instance_key_str'].split('__')[1],
       datetime.now()
       )
-    send_email_smtp(pipeline.get_email_list() , subject, html_content)
+    send_email_smtp(to=pipeline.get_email_list(), subject=subject, html_content=html_content, conn_id=None)
   return (failure_callback, success_callback)
-
 
 
 default_args = {'owner': 'airflow',
@@ -36,7 +35,7 @@ default_args = {'owner': 'airflow',
                   'retries': 1,
                   'email_on_failure': True,
                   'email_on_retry': True,
-                  'email_on_success': False,
+                  'email_on_success': True,
                   'retry_delay': datetime.timedelta(hours=5)
                   }
 
