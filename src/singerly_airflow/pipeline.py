@@ -127,8 +127,10 @@ class Pipeline:
       target_process.stdin.write(next_line)
     
     stdout = target_process.communicate()[0]
-    print(stdout)
-    self.save_state(stdout.decode('utf-8'))
+    stdout_decoded = stdout.decode('utf-8').strip()
+    if stdout_decoded:
+      print(stdout_decoded)
+      self.save_state(stdout_decoded)
 
   def is_valid(self) -> bool:
     return (self.tap_config
