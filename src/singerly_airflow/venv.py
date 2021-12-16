@@ -4,10 +4,12 @@ import os
 
 class VenvPythonMissingException(Exception):
   """Python v3 is not found"""
+  pass
 
 
 class VenvPackageInstallException(Exception):
   """Package could not be installed"""
+  pass
 
 
 class Venv:
@@ -29,7 +31,7 @@ class Venv:
   def install_package(self, package_url):
     package_install = subprocess.run([self.pip_bin, 'install', package_url], capture_output=True, text=True)
     if package_install.returncode != 0:
-      print(package_install.stderr, package_install.stdout)
+      # print(package_install.stderr, package_install.stdout)
       raise VenvPackageInstallException(package_install.stderr)
 
   def get_bin_dir(self) -> str:

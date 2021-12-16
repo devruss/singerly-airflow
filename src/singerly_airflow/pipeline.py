@@ -6,6 +6,9 @@ from dataclasses import dataclass
 from singerly_airflow.utils import timed_lru_cache
 from singerly_airflow.venv import Venv
 
+class PipelineConnectorExecutionException(Exception):
+  pass
+
 @dataclass
 class Pipeline:
   id: int
@@ -17,7 +20,6 @@ class Pipeline:
   tap_catalog: str
   pipeline_state: str
   project_id: str
-  schedule: str
   tap_executable: str = ''
   target_executable: str = ''
   email_list: str = ''
@@ -67,8 +69,10 @@ class Pipeline:
       '-c', 'tap_config.json',
       '--discover'
     ]
-    tap_process = subprocess.Popen(tap_run_args, stdout=subprocess.PIPE)
-    stdout = tap_process.communicate()[0]
+    tap_process = subprocess.Popen(tap_run_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = tap_process.communicate()
+    if tap_process.returncode != 0:
+      raise PipelineConnectorExecutionException(stderr.decode('utf-8'))
     self.save_catalog(stdout.decode('utf-8'))
 
   def save_catalog(self, catalog: str):
