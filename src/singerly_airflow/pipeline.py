@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass
 from singerly_airflow.utils import timed_lru_cache
 from singerly_airflow.venv import Venv
+import re
 
 class PipelineConnectorExecutionException(Exception):
   pass
@@ -46,8 +47,8 @@ class Pipeline:
 
   def get_package_name(self, package_url: str) -> str:
     if (package_url.endswith('.git') or package_url.startswith('git+')):
-      return package_url.split('/')[-1].replace('.git', '')
-    return package_url;
+      return re.sub(r'\.git(@.+)?$', '', package_url.split('/')[-1])
+    return re.sub(r'(@.+)?$', '', package_url)
 
   def get_tap_executable(self) -> str:
     if self.tap_executable:
