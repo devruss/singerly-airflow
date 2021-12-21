@@ -46,9 +46,10 @@ class Pipeline:
     return [email.strip() for email in self.email_list.split(',')]
 
   def get_package_name(self, package_url: str) -> str:
-    if (package_url.endswith('.git') or package_url.startswith('git+')):
-      return re.sub(r'\.git(@.+)?$', '', package_url.split('/')[-1])
-    return re.sub(r'(@.+)?$', '', package_url)
+    tags_cleaned = re.sub(r'(@[^@]+)$', '', package_url);
+    if (tags_cleaned.endswith('.git') or tags_cleaned.startswith('git+')):
+      return tags_cleaned.split('/')[-1].replace('.git', '').strip()
+    return tags_cleaned.strip()
 
   def get_tap_executable(self) -> str:
     if self.tap_executable:
