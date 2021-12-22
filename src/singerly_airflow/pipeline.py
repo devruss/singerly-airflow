@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass
 from singerly_airflow.utils import timed_lru_cache
 from singerly_airflow.venv import Venv
+from urllib.parse import urlparse
 import re
 
 class PipelineConnectorExecutionException(Exception):
@@ -46,10 +47,9 @@ class Pipeline:
     return [email.strip() for email in self.email_list.split(',')]
 
   def get_package_name(self, package_url: str) -> str:
-    tags_cleaned = re.sub(r'(@[^@]+)$', '', package_url);
-    if (tags_cleaned.endswith('.git') or tags_cleaned.startswith('git+')):
-      return tags_cleaned.split('/')[-1].replace('.git', '').strip()
-    return tags_cleaned.strip()
+    url_path = urlparse(package_url).path.strip('/')
+    tags_cleaned = re.sub(r'(@[^@]+)$', '', url_path).replace('.git', '');
+    return tags_cleaned.split('/')[-1]
 
   def get_tap_executable(self) -> str:
     if self.tap_executable:
