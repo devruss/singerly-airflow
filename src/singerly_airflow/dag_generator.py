@@ -50,15 +50,18 @@ def build_dag(pipeline: Pipeline) -> DAG:
     )
   with dag:
     singerly_task = SingerlyOperator(task_id=pipeline.name, pipeline_id=pipeline.id)
-    email_notification = EmailOperator(task_id="email_notification",
-      trigger_rule="all_success",
-      to=pipeline.get_email_list(),
-      subject="""[Airflow] DAG {{ task_instance_key_str.split('__')[0] }}: Success""",
-      html_content="""
-      DAG: <b>{{ task_instance_key_str.split('__')[0] }}</b><br>
-      Succeeded on: {{ macros.datetime.now() }}
-      """)
-    singerly_task >> email_notification
+    if (pipeline.get_email_list()):
+      email_notification = EmailOperator(task_id="email_notification",
+        trigger_rule="all_success",
+        to=pipeline.get_email_list(),
+        subject="""[Airflow] DAG {{ task_instance_key_str.split('__')[0] }}: Success""",
+        html_content="""
+        DAG: <b>{{ task_instance_key_str.split('__')[0] }}</b><br>
+        Succeeded on: {{ macros.datetime.now() }}
+        """)
+      singerly_task >> email_notification
+    else:
+      singerly_task
   return dag
 
 def build_dags(project_id: str, globals):
