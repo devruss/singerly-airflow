@@ -109,7 +109,8 @@ class Pipeline:
     tap_run_args = [
       f'{tap_venv.get_bin_dir()}/{self.get_tap_executable()}',
       '-c', 'tap_config.json',
-      '--catalog', 'catalog.json'
+      '--catalog', 'catalog.json',
+      '-p', 'catalog.json'
     ]
     if self.pipeline_state:
       with open(f'{os.getcwd()}/tap_state.json', 'w') as tap_state_file:
