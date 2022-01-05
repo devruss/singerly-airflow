@@ -3,7 +3,7 @@ from typing import List
 import boto3
 import os
 from dataclasses import dataclass
-from singerly_airflow.utils import timed_lru_cache
+from singerly_airflow.utils import timed_lru_cache, get_package_name
 from singerly_airflow.venv import Venv
 from urllib.parse import urlparse
 import re
@@ -46,59 +46,24 @@ class Pipeline:
       return []
     return [email.strip() for email in self.email_list.split(',')]
 
-  def get_package_name(self, package_url: str) -> str:
-    url_path = urlparse(package_url).path.strip('/')
-    tags_cleaned = re.sub(r'(@[^@]+)$', '', url_path).replace('.git', '');
-    return tags_cleaned.split('/')[-1]
-
   def get_tap_executable(self) -> str:
     if self.tap_executable:
       return self.tap_executable
-    return self.get_package_name(package_url=self.tap_url)
+    return get_package_name(package_url=self.tap_url)
 
   def get_target_executable(self) -> str:
     if self.target_executable:
       return self.target_executable
-    return self.get_package_name(package_url=self.target_url)
-
-  def generate_catalog(self):
-    os.chdir('/tmp')
-    tap_venv = Venv('tap', package_url=self.tap_url, work_dir='/tmp')
-    with open(f'{os.getcwd()}/tap_config.json', 'w') as tap_config_file:
-      tap_config_file.write(self.tap_config)
-    tap_run_args = [
-      f'{tap_venv.get_bin_dir()}/{self.get_tap_executable()}',
-      '-c', 'tap_config.json',
-      '--discover'
-    ]
-    tap_process = subprocess.Popen(tap_run_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = tap_process.communicate()
-    if tap_process.returncode != 0:
-      raise PipelineConnectorExecutionException(stderr.decode('utf-8'))
-    self.save_catalog(stdout.decode('utf-8'))
-
-  def save_catalog(self, catalog: str):
-    self.tap_catalog = catalog;
-    dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table(self.project_id)
-    table.update_item(
-        Key={
-            'id': self.id,
-        },
-        UpdateExpression="set tap_catalog = :catalog",
-        ExpressionAttributeValues={
-            ':catalog': catalog,
-        },
-    )
+    return get_package_name(package_url=self.target_url)
 
   def execute(self) -> None:
     if not self.is_valid():
       return
     work_dir = '/tmp'
     os.chdir(work_dir)
-    print(f'Installing source connector: {self.get_package_name(self.tap_url)}')
+    print(f'Installing source connector: {get_package_name(self.tap_url)}')
     tap_venv = Venv('tap', package_url=self.tap_url, work_dir=work_dir)
-    print(f'Installing destination connector: {self.get_package_name(self.target_url)}')
+    print(f'Installing destination connector: {get_package_name(self.target_url)}')
     target_venv = Venv('target', package_url=self.target_url, work_dir=work_dir)
     with open(f'{os.getcwd()}/tap_config.json', 'w') as tap_config_file:
       tap_config_file.write(self.tap_config)
@@ -133,11 +98,13 @@ class Pipeline:
         print(decoded_line)
       target_process.stdin.write(next_line)
     
-    stdout = target_process.communicate()[0]
+    stdout, stderr = target_process.communicate()
     stdout_decoded = stdout.decode('utf-8').strip()
     if stdout_decoded:
       print(stdout_decoded)
       self.save_state(stdout_decoded)
+    if stderr.decode('utf-8'):
+      print(stderr.decode('utf-8'))
 
   def is_valid(self) -> bool:
     return (self.tap_config

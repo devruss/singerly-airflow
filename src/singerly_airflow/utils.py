@@ -1,5 +1,7 @@
 from functools import lru_cache, wraps
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
+import re
 
 
 def timed_lru_cache(seconds: int, maxsize: int = 128):
@@ -19,3 +21,9 @@ def timed_lru_cache(seconds: int, maxsize: int = 128):
         return wrapped_func
 
     return wrapper_cache
+
+
+def get_package_name(package_url: str) -> str:
+    url_path = urlparse(package_url).path.strip('/')
+    tags_cleaned = re.sub(r'(@[^@]+)$', '', url_path).replace('.git', '');
+    return tags_cleaned.split('/')[-1]
