@@ -90,13 +90,21 @@ class Pipeline:
     target_process = subprocess.Popen(target_run_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=50 * 1024)
 
     while True:
-      next_line = tap_process.stdout.readline()
-      if not next_line:
-        break
-      decoded_line = next_line.decode('utf-8').strip()
-      if decoded_line:
-        print(decoded_line)
-      target_process.stdin.write(next_line)
+      try:
+        next_line = tap_process.stdout.readline()
+        if not next_line:
+          break
+        decoded_line = next_line.decode('utf-8').strip()
+        if decoded_line:
+          print(decoded_line)
+        target_process.stdin.write(next_line)
+      except Exception as e:
+        print(e)
+        stdout, stderr = target_process.communicate()
+        decoded_stderr = stderr.decode('utf-8').strip()
+        if (decoded_stderr):
+          print(decoded_stderr)
+        raise e
     
     stdout, stderr = target_process.communicate()
     tap_process.communicate()
