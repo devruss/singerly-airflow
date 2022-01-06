@@ -86,25 +86,25 @@ class Pipeline:
       '-c', 'target_config.json',
     ]
     print(f'Starting pipeline execution {self.get_tap_executable()} -> {self.get_target_executable()}')
-    tap_process = subprocess.Popen(tap_run_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    target_process = subprocess.Popen(target_run_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    tap_process = subprocess.Popen(tap_run_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=50 * 1024)
+    target_process = subprocess.Popen(target_run_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=50 * 1024)
 
-    for line in tap_process.stdout:
-      if not line:
+    while True:
+      next_line = tap_process.stdout.readline()
+      if not next_line:
         break
-      decoded_line = line.decode('utf-8').strip()
+      decoded_line = next_line.decode('utf-8').strip()
       if decoded_line:
         print(decoded_line)
-      target_process.stdin.write(line)
+      target_process.stdin.write(next_line)
     
     stdout, stderr = target_process.communicate()
     tap_process.communicate()
-
     stdout_decoded = stdout.decode('utf-8').strip()
     if stdout_decoded:
       print(stdout_decoded)
       self.save_state(stdout_decoded)
-    if stderr and stderr.decode('utf-8').strip():
+    if stderr and stderr.decode('utf-8'):
       print(stderr.decode('utf-8'))
 
   def is_valid(self) -> bool:
