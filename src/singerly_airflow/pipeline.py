@@ -104,7 +104,7 @@ class Pipeline:
     if stdout_decoded:
       print(stdout_decoded)
       self.save_state(stdout_decoded)
-    if stderr and stderr.decode('utf-8'):
+    if stderr and stderr.decode('utf-8').strip():
       print(stderr.decode('utf-8'))
 
   def is_valid(self) -> bool:
