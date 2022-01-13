@@ -25,6 +25,7 @@ class Pipeline:
   tap_executable: str = ''
   target_executable: str = ''
   email_list: str = ''
+  uploaded_files: str = ''
   is_enabled: bool = False
   schedule: str = '@dayli'
 
@@ -56,6 +57,19 @@ class Pipeline:
       return self.target_executable
     return get_package_name(package_url=self.target_url)
 
+  def process_uploaded_files(self):
+    uploaded_files = self.uploaded_files.split(',')
+    work_dir = os.getcwd()
+    if uploaded_files:
+      os.chdir('/tmp')
+      s3 = boto3.client('s3')
+      for uploaded_file in uploaded_files:
+        try:
+          s3.download_file('singerly-pipelines-uploads', uploaded_file, uploaded_file)
+        except:
+          print(f'Cannot download file {uploaded_file}')
+      os.chdir(work_dir)
+
   def execute(self) -> None:
     if not self.is_valid():
       return
@@ -64,6 +78,7 @@ class Pipeline:
     print(f'Installing source connector: {get_package_name(self.tap_url)}')
     tap_venv = Venv('tap', package_url=self.tap_url, work_dir=work_dir)
     print(f'Installing destination connector: {get_package_name(self.target_url)}')
+    self.process_uploaded_files()
     target_venv = Venv('target', package_url=self.target_url, work_dir=work_dir)
     with open(f'{os.getcwd()}/tap_config.json', 'w') as tap_config_file:
       tap_config_file.write(self.tap_config)
@@ -106,8 +121,8 @@ class Pipeline:
           print(decoded_stderr)
         raise e
     
-    stdout, stderr = target_process.communicate()
     tap_process.communicate()
+    stdout, stderr = target_process.communicate()
     stdout_decoded = stdout.decode('utf-8').strip()
     if stdout_decoded:
       print(stdout_decoded)
