@@ -64,6 +64,8 @@ class Pipeline:
       os.chdir('/tmp')
       s3 = boto3.client('s3')
       for uploaded_file in uploaded_files:
+        if not uploaded_file:
+          continue
         try:
           s3.download_file('singerly-pipelines-uploads', uploaded_file, uploaded_file)
         except:
