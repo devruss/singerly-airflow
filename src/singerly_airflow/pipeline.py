@@ -123,7 +123,7 @@ class Pipeline:
     
     tap_process.communicate()
     stdout, stderr = target_process.communicate()
-    stdout_decoded = stdout.decode('utf-8').strip()
+    stdout_decoded = stdout.decode('utf-8').splitlines()[-1]
     if stdout_decoded:
       print(stdout_decoded)
       self.save_state(stdout_decoded)
