@@ -1,3 +1,4 @@
+from contextlib import suppress
 import subprocess
 from typing import List
 import boto3
@@ -30,7 +31,7 @@ class Pipeline:
     is_enabled: bool = False
     schedule: str = "@dayli"
 
-    def save_state(self, state: str) -> None:
+    def save_state(self) -> None:
         dynamodb = boto3.resource("dynamodb")
         table = dynamodb.Table(self.project_id)
         table.update_item(
@@ -38,7 +39,7 @@ class Pipeline:
                 "id": self.id,
             },
             UpdateExpression="set pipeline_state=:state",
-            ExpressionAttributeValues={":state": state},
+            ExpressionAttributeValues={":state": self.pipeline_state},
         )
 
     def get_email_list(self):
@@ -73,19 +74,42 @@ class Pipeline:
                     print(f"Cannot download file {uploaded_file}")
             os.chdir(work_dir)
 
+    async def _writer_write_line(self, writer: asyncio.StreamWriter, line):
+        try:
+            writer.write(line)
+            await writer.drain()
+        except (BrokenPipeError, ConnectionResetError):
+            with suppress(AttributeError):
+                await writer.wait_closed()
+
+            return False
+
     async def process_stdout(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ):
-        async for line in reader:
-            if line:
-                writer.write(line)
-                await writer.drain()
+        while not reader.at_eof():
+            line = await reader.readline()
+            if not line:
+                continue
+
+            if not await self._writer_write_line(writer, line):
+                return
+
+    async def process_target_stdout(self, reader: asyncio.StreamReader):
+        while not reader.at_eof():
+            line = await reader.readline()
+            lines = line.splitlines()
+            if not line:
+                continue
+            self.pipeline_state = lines[-1]
 
     async def process_stderr(self, reader: asyncio.StreamReader):
-        async for line in reader:
+        while not reader.at_eof():
+            line = await reader.readline()
             line_decoded = line.strip().decode("utf-8")
-            if line_decoded:
-                print(line_decoded)
+            if not line_decoded:
+                continue
+            print(line_decoded)
 
     async def execute(self) -> None:
         if not self.is_valid():
@@ -151,16 +175,15 @@ class Pipeline:
         stderr_task = loop.create_task(self.process_stderr(reader=tap_coro.stderr))
         await asyncio.gather(stdout_task, stderr_task)
 
-        target_coro.stdin.close()
-        await target_coro.stdin.wait_closed()
+        print("syncing state")
+        self.save_state()
 
-        stdout, _ = await target_coro.communicate()
-        stdout_decoded_lines = stdout.decode("utf-8").splitlines()
-        if len(stdout_decoded_lines):
-            print(stdout_decoded_lines[-1])
-            self.save_state(stdout_decoded_lines[-1])
-        tap_coro.terminate()
-        target_coro.terminate()
+        with suppress(Exception):
+            target_coro.stdin.close()
+            await target_coro.stdin.wait_closed()
+
+            # tap_coro.terminate()
+            # target_coro.terminate()
         await asyncio.wait(
             [tap_coro.wait(), target_coro.wait()], return_when=asyncio.ALL_COMPLETED
         )
