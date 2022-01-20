@@ -83,8 +83,9 @@ class Pipeline:
 
     async def process_stderr(self, reader: asyncio.StreamReader):
         async for line in reader:
-            if line:
-                print(line.decode("utf-8"))
+            line_decoded = line.strip().decode("utf-8")
+            if line_decoded:
+                print(line_decoded)
 
     async def execute(self) -> None:
         if not self.is_valid():
