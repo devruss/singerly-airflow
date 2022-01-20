@@ -104,8 +104,7 @@ class Pipeline:
             self.pipeline_state = lines[-1]
 
     async def process_stderr(self, reader: asyncio.StreamReader):
-        while not reader.at_eof():
-            line = await reader.readline()
+        async for line in reader:
             line_decoded = line.strip().decode("utf-8")
             if not line_decoded:
                 continue
@@ -163,7 +162,6 @@ class Pipeline:
             *target_run_args,
             stdout=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.PIPE,
-            stderr=subprocess.PIPE,
             # bufsize=50 * 1024,
         )
 
@@ -173,17 +171,23 @@ class Pipeline:
             self.process_stdout(reader=tap_coro.stdout, writer=target_coro.stdin)
         )
         stderr_task = loop.create_task(self.process_stderr(reader=tap_coro.stderr))
-        await asyncio.gather(stdout_task, stderr_task)
+        target_stderr_task = loop.create_task(
+            self.process_stderr(reader=target_coro.stderr)
+        )
 
-        print("syncing state")
+        await asyncio.wait(
+            [stdout_task, stderr_task],
+        )
+
+        print("Syncing state")
         self.save_state()
 
         with suppress(Exception):
             target_coro.stdin.close()
             await target_coro.stdin.wait_closed()
+            tap_coro.terminate()
+            target_coro.terminate()
 
-            # tap_coro.terminate()
-            # target_coro.terminate()
         await asyncio.wait(
             [tap_coro.wait(), target_coro.wait()], return_when=asyncio.ALL_COMPLETED
         )
