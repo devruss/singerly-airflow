@@ -24,6 +24,6 @@ def timed_lru_cache(seconds: int, maxsize: int = 128):
 
 
 def get_package_name(package_url: str) -> str:
-    url_path = urlparse(package_url).path.strip('/')
-    tags_cleaned = re.sub(r'(@[^@]+)$', '', url_path).replace('.git', '');
-    return tags_cleaned.split('/')[-1]
+    url_path = urlparse(package_url).path.strip("/")
+    tags_cleaned = re.sub(r"(@[^@]+)$", "", url_path).replace(".git", "")
+    return tags_cleaned.split("/")[-1]
