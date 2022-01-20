@@ -98,13 +98,14 @@ class Pipeline:
     async def process_target_stdout(self, reader: asyncio.StreamReader):
         while not reader.at_eof():
             line = await reader.readline()
-            lines = line.splitlines()
             if not line:
                 continue
+            lines = line.splitlines()
             self.pipeline_state = lines[-1]
 
     async def process_stderr(self, reader: asyncio.StreamReader):
-        async for line in reader:
+        while not reader.at_eof():
+            line = await reader.readline()
             line_decoded = line.strip().decode("utf-8")
             if not line_decoded:
                 continue
@@ -171,9 +172,9 @@ class Pipeline:
             self.process_stdout(reader=tap_coro.stdout, writer=target_coro.stdin)
         )
         stderr_task = loop.create_task(self.process_stderr(reader=tap_coro.stderr))
-        target_stderr_task = loop.create_task(
-            self.process_stderr(reader=target_coro.stderr)
-        )
+        # target_stderr_task = loop.create_task(
+        #     self.process_stderr(reader=target_coro.stderr)
+        # )
 
         await asyncio.wait(
             [stdout_task, stderr_task],
