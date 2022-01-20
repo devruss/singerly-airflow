@@ -157,13 +157,14 @@ class Pipeline:
             *tap_run_args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            # bufsize=50 * 1024,
+            limit=50 * 1024,
         )
         target_coro = await asyncio.subprocess.create_subprocess_exec(
             *target_run_args,
             stdout=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.PIPE,
-            # bufsize=50 * 1024,
+            stderr=asyncio.subprocess.PIPE,
+            limit=50 * 1024,
         )
 
         loop = asyncio.get_running_loop()
