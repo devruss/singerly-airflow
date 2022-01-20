@@ -159,7 +159,11 @@ class Pipeline:
         if len(stdout_decoded_lines):
             print(stdout_decoded_lines[-1])
             self.save_state(stdout_decoded_lines[-1])
-        await asyncio.wait([tap_coro.wait(), target_coro.wait()])
+        tap_coro.terminate()
+        target_coro.terminate()
+        await asyncio.wait(
+            [tap_coro.wait(), target_coro.wait()], return_when=asyncio.ALL_COMPLETED
+        )
 
         print("Finished data sync")
         # while True:
