@@ -80,6 +80,7 @@ class Pipeline:
             await writer.drain()
         except (BrokenPipeError, ConnectionResetError):
             with suppress(AttributeError):
+                writer.close()
                 await writer.wait_closed()
 
             return False
@@ -87,29 +88,22 @@ class Pipeline:
     async def process_stdout(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ):
-        while not reader.at_eof():
-            line = await reader.readline()
-            if not line:
-                continue
-
+        while line := await reader.readline():
             if not await self._writer_write_line(writer, line):
                 return
 
     async def process_target_stdout(self, reader: asyncio.StreamReader):
-        while not reader.at_eof():
-            line = await reader.readline()
-            if not line:
-                continue
+        while line := await reader.readline():
             lines = line.splitlines()
             self.pipeline_state = lines[-1]
 
     async def process_stderr(self, reader: asyncio.StreamReader):
-        while not reader.at_eof():
-            line = await reader.readline()
-            line_decoded = line.strip().decode("utf-8")
-            if not line_decoded:
-                continue
-            print(line_decoded)
+        with suppress(asyncio.CancelledError):
+            while line := await reader.readline():
+                line_decoded = line.strip().decode("utf-8")
+                if not line_decoded:
+                    continue
+                print(line_decoded)
 
     async def execute(self) -> None:
         if not self.is_valid():
@@ -157,14 +151,14 @@ class Pipeline:
             *tap_run_args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            limit=50 * 1024,
+            limit=5 * 1024 * 1024,
         )
         target_coro = await asyncio.subprocess.create_subprocess_exec(
             *target_run_args,
             stdout=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            limit=50 * 1024,
+            limit=5 * 1024 * 1024,
         )
 
         loop = asyncio.get_running_loop()
@@ -177,9 +171,7 @@ class Pipeline:
         #     self.process_stderr(reader=target_coro.stderr)
         # )
 
-        await asyncio.wait(
-            [stdout_task, stderr_task],
-        )
+        await asyncio.gather(stdout_task, stderr_task)
 
         print("Syncing state")
         self.save_state()
