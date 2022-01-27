@@ -2,7 +2,7 @@ import asyncio
 from codecs import StreamReader
 from contextlib import suppress
 
-from black import os
+import os
 from singerly_airflow.pipeline import Pipeline
 from singerly_airflow.utils import get_package_name
 from singerly_airflow.venv import Venv
