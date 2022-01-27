@@ -79,7 +79,7 @@ class Executor:
         ]
         if self.pipeline.pipeline_state:
             with open(f"{os.getcwd()}/tap_state.json", "w") as tap_state_file:
-                tap_state_file.write(self.pipeline_state)
+                tap_state_file.write(self.pipeline.pipeline_state)
             tap_run_args.extend(["-s", "tap_state.json"])
         target_run_args = [
             f"{self.target_venv.get_bin_dir()}/{self.pipeline.get_target_executable()}",
