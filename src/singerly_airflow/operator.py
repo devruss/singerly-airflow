@@ -1,6 +1,7 @@
 from airflow.models.baseoperator import BaseOperator
 from airflow.models.taskinstance import Context
 from singerly_airflow.pipeline import get_pipeline
+from singerly_airflow.executor import Executor
 import os
 import asyncio
 
@@ -15,4 +16,5 @@ class SingerlyOperator(BaseOperator):
             project_id=os.environ.get("PROJECT_ID"), id=self.pipeline_id
         )
         if pipeline and pipeline.is_valid():
-            asyncio.run(pipeline.execute())
+            pipeline_executor = Executor(pipeline)
+            asyncio.run(pipeline_executor.execute())
