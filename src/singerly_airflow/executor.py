@@ -112,7 +112,7 @@ class Executor:
         )
         target_proc = await asyncio.subprocess.create_subprocess_exec(
             *target_run_args,
-            stdout=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             limit=5 * 1024 * 1024,
