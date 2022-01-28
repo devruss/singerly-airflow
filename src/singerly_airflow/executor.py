@@ -23,10 +23,12 @@ class Executor:
         while line := await self.logs_queue.get():
             print(line)
 
-    async def enqueue_stream_data(self, reader: asyncio.StreamReader):
+    async def enqueue_stream_data(
+        self, queue: asyncio.Queue, reader: asyncio.StreamReader
+    ):
         while line := await reader.readline():
-            await self.stream_queue.put(line)
-        await self.stream_queue.put(None)
+            await queue.put(line)
+        await queue.put(None)
 
     async def process_stream_queue(self, writer: asyncio.StreamWriter):
         while line := await self.stream_queue.get():
@@ -38,6 +40,13 @@ class Executor:
                     writer.close()
                     await writer.wait_closed()
                     return
+
+    async def process_state_queue(self):
+        while line := await self.state_queue.get():
+            with suppress(AttributeError):
+                line_decoded = line.decode("utf-8").splitlines()[-1]
+                if line_decoded:
+                    self.pipeline.pipeline_state = line_decoded
 
     async def install_connectors(self):
         print(f"Installing source connector: {get_package_name(self.pipeline.tap_url)}")
@@ -60,6 +69,7 @@ class Executor:
         os.chdir(self.work_dir)
         self.logs_queue = asyncio.Queue()
         self.stream_queue = asyncio.Queue()
+        self.state_queue = asyncio.Queue()
 
         await self.install_connectors()
 
@@ -115,12 +125,16 @@ class Executor:
             self.enqueue_logs(reader=target_proc.stderr)
         )
         target_stream_enqueue_task = asyncio.create_task(
-            self.enqueue_stream_data(reader=tap_proc.stdout)
+            self.enqueue_stream_data(reader=tap_proc.stdout, queue=self.stream_queue)
+        )
+        target_state_enqueue_task = asyncio.create_task(
+            self.enqueue_stream_data(reader=target_proc.stdout, queue=self.state_queue)
         )
         process_logs_task = asyncio.create_task(self.process_logs_queue())
         process_stream_task = asyncio.create_task(
             self.process_stream_queue(writer=target_proc.stdin)
         )
+        process_state_task = asyncio.create_task(self.process_state_queue())
 
         logs_tasks = asyncio.gather(
             tap_logs_enqueue_task,
@@ -130,7 +144,9 @@ class Executor:
 
         stream_tasks = asyncio.gather(
             target_stream_enqueue_task,
+            target_state_enqueue_task,
             process_stream_task,
+            process_state_task,
         )
 
         await asyncio.wait(
@@ -146,15 +162,10 @@ class Executor:
         await self.logs_queue.put(None)
 
         await tap_proc.communicate()
-        (stdout,) = await target_proc.communicate()
+        await target_proc.communicate()
 
         print("Syncing state")
-        with suppress(AttributeError):
-            target_stdout_decoded = stdout.decode("utf-8").splitlines()[-1]
-            if target_stdout_decoded:
-                print(target_stdout_decoded)
-                self.pipeline.pipeline_state = target_stdout_decoded
-                self.pipeline.save_state()
+        self.pipeline.save_state()
 
         await asyncio.wait(
             [tap_proc.wait(), target_proc.wait()], return_when=asyncio.ALL_COMPLETED
