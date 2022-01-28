@@ -133,11 +133,9 @@ class Executor:
             process_stream_task,
         )
 
-        result = await asyncio.wait(
+        await asyncio.wait(
             [logs_tasks, stream_tasks], return_when=asyncio.FIRST_COMPLETED
         )
-
-        print(result)
 
         print("Stream processing finished")
         with suppress(AttributeError):
@@ -147,11 +145,16 @@ class Executor:
 
         await self.logs_queue.put(None)
 
-        print("Syncing state")
-        self.pipeline.save_state()
-
         await tap_proc.communicate()
-        await target_proc.communicate()
+        stdout = await target_proc.communicate()[0]
+
+        print("Syncing state")
+        with suppress(AttributeError):
+            target_stdout_decoded = stdout.decode("utf-8").splitlines()[-1]
+            if target_stdout_decoded:
+                print(target_stdout_decoded)
+                self.pipeline.pipeline_state = target_stdout_decoded
+                self.pipeline.save_state()
 
         await asyncio.wait(
             [tap_proc.wait(), target_proc.wait()], return_when=asyncio.ALL_COMPLETED
