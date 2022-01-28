@@ -15,11 +15,13 @@ class Executor:
 
     async def enqueue_logs(self, reader: asyncio.StreamReader):
         while line := await reader.readline():
-            await self.logs_queue.put(line)
+            line_decoded = line.decode("utf-8").strip()
+            if line_decoded:
+                await self.logs_queue.put(line_decoded)
 
     async def process_logs_queue(self):
         while line := await self.logs_queue.get():
-            print(line.decode("utf-8"))
+            print(line)
 
     async def enqueue_stream_data(self, reader: asyncio.StreamReader):
         while line := await reader.readline():
