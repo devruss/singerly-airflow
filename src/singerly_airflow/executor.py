@@ -149,8 +149,13 @@ class Executor:
             process_state_task,
         )
 
+        state_tasks = asyncio.gather(
+            target_state_enqueue_task,
+            process_state_task,
+        )
+
         await asyncio.wait(
-            [logs_tasks, stream_tasks], return_when=asyncio.FIRST_COMPLETED
+            [logs_tasks, stream_tasks, state_tasks], return_when=asyncio.FIRST_COMPLETED
         )
 
         print("Stream processing finished")
@@ -161,6 +166,7 @@ class Executor:
             target_proc.terminate()
 
         await self.logs_queue.put(None)
+        await self.state_queue.put(None)
 
         # await tap_proc.communicate()
         # await target_proc.communicate()
