@@ -146,7 +146,7 @@ class Executor:
         await self.logs_queue.put(None)
 
         await tap_proc.communicate()
-        stdout = await target_proc.communicate()[0]
+        (stdout,) = await target_proc.communicate()
 
         print("Syncing state")
         with suppress(AttributeError):
