@@ -166,7 +166,7 @@ class Executor:
         await self.state_queue.put(None)
 
         print("Stream processing finished")
-        with suppress(AttributeError):
+        with suppress(AttributeError, ProcessLookupError, OSError):
             target_proc.stdin.close()
             await target_proc.stdin.wait_closed()
             tap_proc.terminate()
