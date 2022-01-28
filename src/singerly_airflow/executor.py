@@ -157,12 +157,13 @@ class Executor:
         with suppress(AttributeError):
             target_proc.stdin.close()
             await target_proc.stdin.wait_closed()
+            tap_proc.terminate()
             target_proc.terminate()
 
         await self.logs_queue.put(None)
 
-        await tap_proc.communicate()
-        await target_proc.communicate()
+        # await tap_proc.communicate()
+        # await target_proc.communicate()
 
         print("Syncing state")
         self.pipeline.save_state()
