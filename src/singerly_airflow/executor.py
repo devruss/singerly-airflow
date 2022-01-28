@@ -40,6 +40,10 @@ class Executor:
                     writer.close()
                     await writer.wait_closed()
                     return
+        with suppress(AttributeError):
+            writer.close()
+            await writer.wait_closed()
+            return
 
     async def process_state_queue(self):
         while line := await self.state_queue.get():
@@ -158,15 +162,15 @@ class Executor:
             [logs_tasks, stream_tasks, state_tasks], return_when=asyncio.FIRST_COMPLETED
         )
 
+        await self.logs_queue.put(None)
+        await self.state_queue.put(None)
+
         print("Stream processing finished")
         with suppress(AttributeError):
             target_proc.stdin.close()
             await target_proc.stdin.wait_closed()
             tap_proc.terminate()
             target_proc.terminate()
-
-        await self.logs_queue.put(None)
-        await self.state_queue.put(None)
 
         # await tap_proc.communicate()
         # await target_proc.communicate()
