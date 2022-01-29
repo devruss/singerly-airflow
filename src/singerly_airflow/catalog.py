@@ -1,6 +1,7 @@
 import os
 import subprocess
 from singerly_airflow.utils import get_package_name
+import asyncio
 
 from singerly_airflow.venv import Venv
 
@@ -13,6 +14,7 @@ def generate_catalog(tap_url, tap_config, tap_executable=""):
     os.chdir("/tmp")
     tap_executable = tap_executable if tap_executable else get_package_name(tap_url)
     tap_venv = Venv("tap", package_url=tap_url, work_dir="/tmp")
+    asyncio.run(tap_venv.install_package())
     with open(f"{os.getcwd()}/tap_config.json", "w") as tap_config_file:
         tap_config_file.write(tap_config)
     tap_run_args = [
