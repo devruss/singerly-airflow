@@ -14,24 +14,36 @@ class Executor:
         self.work_dir = "/tmp"
 
     async def enqueue_logs(self, reader: asyncio.StreamReader):
-        while line := await reader.readline():
+        while True:
+            line = await reader.readline()
+            if not line:
+                break
             line_decoded = line.decode("utf-8").strip()
             if line_decoded:
                 await self.logs_queue.put(line_decoded)
 
     async def process_logs_queue(self):
-        while line := await self.logs_queue.get():
+        while True:
+            line = await self.logs_queue.get()
+            if not line:
+                break
             print(line)
 
     async def enqueue_stream_data(
         self, queue: asyncio.Queue, reader: asyncio.StreamReader
     ):
-        while line := await reader.readline():
+        while True:
+            line = await reader.readline()
+            if not line:
+                break
             await queue.put(line)
         await queue.put(None)
 
     async def process_stream_queue(self, writer: asyncio.StreamWriter):
-        while line := await self.stream_queue.get():
+        while True:
+            line = await self.stream_queue.get()
+            if not line:
+                break
             try:
                 writer.write(line)
                 await writer.drain()
@@ -46,7 +58,10 @@ class Executor:
             return
 
     async def process_state_queue(self):
-        while line := await self.state_queue.get():
+        while True:
+            line = await self.state_queue.get()
+            if not line:
+                break
             with suppress(AttributeError):
                 line_decoded = line.decode("utf-8").splitlines()[-1]
                 if line_decoded:
