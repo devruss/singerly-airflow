@@ -8,6 +8,10 @@ from singerly_airflow.utils import get_package_name
 from singerly_airflow.venv import Venv
 
 
+class PipelineExecutionFailedException(Exception):
+    pass
+
+
 class Executor:
     def __init__(self, pipeline: Pipeline) -> None:
         self.pipeline = pipeline
@@ -180,15 +184,11 @@ class Executor:
         await self.logs_queue.put(None)
         await self.state_queue.put(None)
 
-        print("Stream processing finished")
         with suppress(AttributeError, ProcessLookupError, OSError):
             target_proc.stdin.close()
             await target_proc.stdin.wait_closed()
             tap_proc.terminate()
             target_proc.terminate()
-
-        # await tap_proc.communicate()
-        # await target_proc.communicate()
 
         print("Syncing state")
         self.pipeline.save_state()
@@ -197,29 +197,12 @@ class Executor:
             [tap_proc.wait(), target_proc.wait()], return_when=asyncio.ALL_COMPLETED
         )
 
-        print("Finished pipeline execution")
-        # while True:
-        #     try:
-        #         next_line = tap_process.stdout.readline()
-        #         if not next_line:
-        #             break
-        #         decoded_line = next_line.decode("utf-8").strip()
-        #         if decoded_line:
-        #             print(decoded_line)
-        #         target_process.stdin.write(next_line)
-        #     except Exception as e:
-        #         print(e)
-        #         stdout, stderr = target_process.communicate()
-        #         decoded_stderr = stderr.decode("utf-8").strip()
-        #         if decoded_stderr:
-        #             print(decoded_stderr)
-        #         raise e
+        if tap_proc.returncode > 0 or target_proc.returncode > 0:
+            message = (
+                "Tap failed to run"
+                if tap_proc.returncode > 0
+                else "Target failed to run"
+            )
+            raise PipelineExecutionFailedException(message)
 
-        # tap_process.communicate()
-        # stdout, stderr = target_process.communicate()
-        # stdout_decoded_lines = stdout.decode("utf-8").splitlines()
-        # if len(stdout_decoded_lines):
-        #     print(stdout_decoded_lines[-1])
-        #     self.save_state(stdout_decoded_lines[-1])
-        # # if stderr and stderr.decode('utf-8'):
-        # #   print(stderr.decode('utf-8'))
+        print("Finished pipeline execution")
