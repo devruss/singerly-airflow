@@ -36,8 +36,8 @@ class Venv:
         package_install = await asyncio.subprocess.create_subprocess_exec(
             self.pip_bin,
             *["install", self.package_url],
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
+            # stdout=asyncio.subprocess.DEVNULL,
+            # stderr=asyncio.subprocess.DEVNULL,
         )
         await package_install.wait()
         if package_install.returncode != 0:
