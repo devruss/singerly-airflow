@@ -181,8 +181,8 @@ class Executor:
             [stream_tasks, state_tasks], return_when=asyncio.ALL_COMPLETED
         )
 
-        await self.logs_queue.put_nowait(None)
-        await self.state_queue.put_nowait(None)
+        await self.logs_queue.put(None)
+        await self.state_queue.put(None)
 
         await logs_tasks
 
