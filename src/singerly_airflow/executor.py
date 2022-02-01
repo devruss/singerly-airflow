@@ -178,11 +178,13 @@ class Executor:
         )
 
         await asyncio.wait(
-            [logs_tasks, stream_tasks, state_tasks], return_when=asyncio.FIRST_COMPLETED
+            [stream_tasks, state_tasks], return_when=asyncio.ALL_COMPLETED
         )
 
-        await self.logs_queue.put(None)
-        await self.state_queue.put(None)
+        await self.logs_queue.put_nowait(None)
+        await self.state_queue.put_nowait(None)
+
+        await logs_tasks
 
         with suppress(AttributeError, ProcessLookupError, OSError):
             target_proc.stdin.close()
