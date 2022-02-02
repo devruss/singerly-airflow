@@ -21,12 +21,12 @@ class Executor:
     async def enqueue_logs(self, reader: asyncio.StreamReader):
         while not reader.at_eof():
             line = await reader.readline()
+            # print("[LOGS_QUEUE] Got line", line)
             if not line:
                 continue
             line_decoded = line.decode("utf-8").strip()
             if line_decoded:
                 await self.logs_queue.put(line_decoded)
-        await self.logs_queue.put(None)
 
     async def process_logs_queue(self):
         while True:
@@ -40,6 +40,7 @@ class Executor:
     ):
         while not reader.at_eof():
             line = await reader.readline()
+            # print("[STREAM_QUEUE] Got line", line)
             if not line:
                 continue
             await queue.put(line)
@@ -48,9 +49,11 @@ class Executor:
     async def process_stream_queue(self, writer: asyncio.StreamWriter):
         while True:
             line = await self.stream_queue.get()
+            # print("[STR] Got line", line)
             if not line:
                 break
             try:
+                # print(f"[Stream]", line.decode("utf-8"))
                 writer.write(line)
                 await writer.drain()
             except (BrokenPipeError, ConnectionResetError):
@@ -198,11 +201,12 @@ class Executor:
             process_state_task,
         )
 
-        asyncio.create_task(self.check_target_process(target_proc))
+        # asyncio.create_task(self.check_target_process(target_proc))
 
         await asyncio.wait(
             [stream_tasks, state_tasks], return_when=asyncio.ALL_COMPLETED
         )
+        print("Finished stream processing")
 
         await self.logs_queue.put(None)
         await self.stream_queue.put(None)
