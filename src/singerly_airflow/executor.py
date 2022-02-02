@@ -1,4 +1,5 @@
 import asyncio
+from asyncio.subprocess import Process
 from codecs import StreamReader
 from contextlib import suppress
 
@@ -18,13 +19,14 @@ class Executor:
         self.work_dir = "/tmp"
 
     async def enqueue_logs(self, reader: asyncio.StreamReader):
-        while True:
+        while not reader.at_eof():
             line = await reader.readline()
             if not line:
-                break
+                continue
             line_decoded = line.decode("utf-8").strip()
             if line_decoded:
                 await self.logs_queue.put(line_decoded)
+        await self.logs_queue.put(None)
 
     async def process_logs_queue(self):
         while True:
@@ -36,10 +38,10 @@ class Executor:
     async def enqueue_stream_data(
         self, queue: asyncio.Queue, reader: asyncio.StreamReader
     ):
-        while True:
+        while not reader.at_eof():
             line = await reader.readline()
             if not line:
-                break
+                continue
             await queue.put(line)
         await queue.put(None)
 
@@ -86,6 +88,23 @@ class Executor:
             self.tap_venv.install_package(), self.target_venv.install_package()
         )
 
+    async def check_target_process(self, process: Process):
+        while True:
+            try:
+                await asyncio.wait_for(process.wait(), timeout=5)
+            except asyncio.TimeoutError:
+                pass
+                # print("status is ", process.returncode)
+            finally:
+                if process.returncode is not None:
+                    # print("exited with code", process.returncode)
+                    with suppress(BaseException):
+                        process.stdin.close()
+                        process.terminate()
+                        process.stdout.feed_eof()
+                        process.stderr.feed_eof()
+                    return
+
     async def execute(self):
         if not self.pipeline.is_valid():
             return
@@ -96,13 +115,15 @@ class Executor:
 
         await self.install_connectors()
 
-        # self.process_uploaded_files()
+        self.pipeline.process_uploaded_files()
+
         with open(f"{os.getcwd()}/tap_config.json", "w") as tap_config_file:
             tap_config_file.write(self.pipeline.tap_config)
         with open(f"{os.getcwd()}/target_config.json", "w") as target_config_file:
             target_config_file.write(self.pipeline.target_config)
         with open(f"{os.getcwd()}/catalog.json", "w") as catalog_file:
             catalog_file.write(self.pipeline.tap_catalog)
+
         tap_run_args = [
             f"{self.tap_venv.get_bin_dir()}/{self.pipeline.get_tap_executable()}",
             "-c",
@@ -177,14 +198,15 @@ class Executor:
             process_state_task,
         )
 
+        asyncio.create_task(self.check_target_process(target_proc))
+
         await asyncio.wait(
             [stream_tasks, state_tasks], return_when=asyncio.ALL_COMPLETED
         )
 
         await self.logs_queue.put(None)
+        await self.stream_queue.put(None)
         await self.state_queue.put(None)
-
-        await logs_tasks
 
         with suppress(AttributeError, ProcessLookupError, OSError):
             target_proc.stdin.close()
@@ -196,8 +218,11 @@ class Executor:
         self.pipeline.save_state()
 
         await asyncio.wait(
-            [tap_proc.wait(), target_proc.wait()], return_when=asyncio.ALL_COMPLETED
+            [tap_proc.wait(), target_proc.wait()], return_when=asyncio.FIRST_COMPLETED
         )
+
+        logs_tasks.cancel()
+        await logs_tasks
 
         if tap_proc.returncode > 0 or target_proc.returncode > 0:
             message = (
