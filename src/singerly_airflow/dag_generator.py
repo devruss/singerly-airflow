@@ -1,6 +1,6 @@
 import datetime
 from multiprocessing import Pipe
-from airflow.utils import dates, trigger_rule
+from airflow.utils import timezone
 from airflow.utils.email import send_email_smtp
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
@@ -40,7 +40,7 @@ def send_email_alert(pipeline: Pipeline):
 
 default_args = {
     "owner": "airflow",
-    "start_date": dates.days_ago(0),
+    "start_date": timezone.utcnow(),
     "depends_on_past": False,
     "retries": 1,
     "email_on_failure": True,
