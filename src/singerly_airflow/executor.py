@@ -117,8 +117,8 @@ class Executor:
         if not self.pipeline.is_valid():
             return
         os.chdir(self.work_dir)
-        self.logs_queue = asyncio.Queue(maxsize=10000)
-        self.stream_queue = asyncio.Queue(maxsize=50000)
+        self.logs_queue = asyncio.Queue(maxsize=1000)
+        self.stream_queue = asyncio.Queue(maxsize=500)
         self.state_queue = asyncio.Queue()
 
         await self.install_connectors()
