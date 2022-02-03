@@ -2,6 +2,7 @@ import asyncio
 from asyncio.subprocess import Process
 from codecs import StreamReader
 from contextlib import suppress
+import json
 
 import os
 from singerly_airflow.pipeline import Pipeline
@@ -41,9 +42,11 @@ class Executor:
         while not reader.at_eof():
             line = await reader.readline()
             # print("[STREAM_QUEUE] Got line", line)
-            if not line:
+            try:
+                json.loads(line)
+                await queue.put(line)
+            except:
                 continue
-            await queue.put(line)
         await queue.put(None)
 
     async def process_stream_queue(self, writer: asyncio.StreamWriter):
@@ -173,7 +176,7 @@ class Executor:
         target_logs_enqueue_task = asyncio.create_task(
             self.enqueue_logs(reader=target_proc.stderr)
         )
-        target_stream_enqueue_task = asyncio.create_task(
+        tap_stream_enqueue_task = asyncio.create_task(
             self.enqueue_stream_data(reader=tap_proc.stdout, queue=self.stream_queue)
         )
         target_state_enqueue_task = asyncio.create_task(
@@ -194,10 +197,10 @@ class Executor:
         tap_stream_tasks = asyncio.gather(
             process_stream_task,
             process_state_task,
+            tap_stream_enqueue_task,
         )
 
         target_stream_tasks = asyncio.gather(
-            target_stream_enqueue_task,
             target_state_enqueue_task,
         )
 
@@ -248,9 +251,11 @@ class Executor:
                 # Kill tap and cancel output processing since there's no more target to forward messages to
                 tap_proc.kill()
                 await tap_future
-                tap_stream_tasks.cancel()
                 await self.logs_queue.put(None)
                 await self.stream_queue.put(None)
+                await self.state_queue.put(None)
+
+                tap_stream_tasks.cancel()
 
                 # Pretend the tap finished successfully since it didn't itself fail
                 tap_code = 0
@@ -283,9 +288,11 @@ class Executor:
                 "Tap and target failed",
             )
         elif tap_code:
-            raise PipelineExecutionFailedException("Tap failed")
+            raise PipelineExecutionFailedException(f"Tap failed with code {tap_code}")
         elif target_code:
-            raise PipelineExecutionFailedException("Target failed")
+            raise PipelineExecutionFailedException(
+                "Target failed with code {target_code}"
+            )
 
         logs_tasks.cancel()
         await logs_tasks
