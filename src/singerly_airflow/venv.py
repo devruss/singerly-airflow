@@ -39,9 +39,9 @@ class Venv:
             # stdout=asyncio.subprocess.PIPE,
             # stderr=asyncio.subprocess.PIPE,
         )
-        await package_install.wait()
+        await package_install.communicate()
         if package_install.returncode != 0:
-            # print(package_install.stderr, package_install.stdout)
+            print(package_install.stderr, package_install.stdout)
             raise VenvPackageInstallException(package_install.stderr)
 
     def get_bin_dir(self) -> str:
