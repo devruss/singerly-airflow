@@ -81,13 +81,13 @@ class Executor:
         self.tap_venv = Venv(
             "tap", package_url=self.pipeline.tap_url, work_dir=self.work_dir
         )
-        print(
-            f"Installing destination connector: {get_package_name(self.pipeline.target_url)}"
-        )
         self.target_venv = Venv(
             "target", package_url=self.pipeline.target_url, work_dir=self.work_dir
         )
         await self.tap_venv.install_package()
+        print(
+            f"Installing destination connector: {get_package_name(self.pipeline.target_url)}"
+        )
         await self.target_venv.install_package()
         # await asyncio.gather(
         #     self.tap_venv.install_package(), self.target_venv.install_package()
