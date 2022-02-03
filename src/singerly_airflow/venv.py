@@ -41,7 +41,7 @@ class Venv:
         )
         (stdout, stderr) = await package_install.communicate()
         if package_install.returncode != 0:
-            print(stderr, stdout)
+            print("Errors", stderr, stdout)
             raise VenvPackageInstallException(stderr)
 
     def get_bin_dir(self) -> str:
