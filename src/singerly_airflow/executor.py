@@ -87,9 +87,11 @@ class Executor:
         self.target_venv = Venv(
             "target", package_url=self.pipeline.target_url, work_dir=self.work_dir
         )
-        await asyncio.gather(
-            self.tap_venv.install_package(), self.target_venv.install_package()
-        )
+        await self.tap_venv.install_package()
+        await self.target_venv.install_package()
+        # await asyncio.gather(
+        #     self.tap_venv.install_package(), self.target_venv.install_package()
+        # )
 
     async def check_target_process(self, process: Process):
         while True:
