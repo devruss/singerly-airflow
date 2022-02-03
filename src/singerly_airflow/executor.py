@@ -206,11 +206,20 @@ class Executor:
             process_state_task,
         )
 
+        tap_future = asyncio.ensure_future(tap_proc.wait())
+        target_future = asyncio.ensure_future(target_proc.wait())
+
         # asyncio.create_task(self.check_target_process(target_proc))
 
         await asyncio.wait(
-            [tap_stream_tasks, target_stream_tasks, state_tasks],
-            return_when=asyncio.ALL_COMPLETED,
+            [
+                tap_stream_tasks,
+                target_stream_tasks,
+                state_tasks,
+                tap_future,
+                target_future,
+            ],
+            return_when=asyncio.FIRST_EXCEPTION,
         )
         print("Finished stream processing")
 
@@ -218,28 +227,75 @@ class Executor:
         await self.stream_queue.put(None)
         await self.state_queue.put(None)
 
-        with suppress(AttributeError, ProcessLookupError, OSError):
-            target_proc.stdin.close()
-            await target_proc.stdin.wait_closed()
-            tap_proc.terminate()
-            target_proc.terminate()
+        # with suppress(AttributeError, ProcessLookupError, OSError):
+        #     target_proc.stdin.close()
+        #     await target_proc.stdin.wait_closed()
+        #     tap_proc.terminate()
+        #     target_proc.terminate()
 
-        print("Syncing state")
-        self.pipeline.save_state()
-
-        await asyncio.wait(
-            [tap_proc.wait(), target_proc.wait()], return_when=asyncio.FIRST_COMPLETED
+        done, _ = await asyncio.wait(
+            [tap_future, target_future], return_when=asyncio.FIRST_COMPLETED
         )
+
+        if target_future in done:
+            target_code = target_future.result()
+
+            if tap_future in done:
+                tap_code = tap_future.result()
+            else:
+                # If the target completes before the tap, it failed before processing all tap output
+
+                # Kill tap and cancel output processing since there's no more target to forward messages to
+                tap_proc.kill()
+                await tap_future
+                tap_stream_tasks.cancel()
+                await self.logs_queue.put(None)
+                await self.stream_queue.put(None)
+
+                # Pretend the tap finished successfully since it didn't itself fail
+                tap_code = 0
+
+            # Wait for all buffered target output to be processed
+            await asyncio.wait([target_stream_tasks])
+        else:  # if tap_process_future in done:
+            # If the tap completes before the target, the target should have a chance to process all tap output
+            tap_code = tap_future.result()
+
+            # Wait for all buffered tap output to be processed
+            await asyncio.wait([tap_stream_tasks, tap_logs_enqueue_task])
+
+            # Close target stdin so process can complete naturally
+            target_proc.stdin.close()
+            with suppress(AttributeError):  # `wait_closed` is Python 3.7+
+                await target_proc.stdin.wait_closed()
+
+            # Wait for all buffered target output to be processed
+            await asyncio.wait([target_stream_tasks])
+
+            # Wait for target to complete
+            target_code = await target_future
+
+            print("Syncing state")
+            self.pipeline.save_state()
+
+        if tap_code and target_code:
+            raise PipelineExecutionFailedException(
+                "Tap and target failed",
+            )
+        elif tap_code:
+            raise PipelineExecutionFailedException("Tap failed")
+        elif target_code:
+            raise PipelineExecutionFailedException("Target failed")
 
         logs_tasks.cancel()
         await logs_tasks
 
-        if (tap_proc.returncode is not None) and (tap_proc.returncode > 0):
-            message = "Tap failed to run"
-            raise PipelineExecutionFailedException(message)
+        # if (tap_proc.returncode is not None) and (tap_proc.returncode > 0):
+        #     message = "Tap failed to run"
+        #     raise PipelineExecutionFailedException(message)
 
-        if (target_proc.returncode is not None) and (target_proc.returncode > 0):
-            message = "Target failed to run"
-            raise PipelineExecutionFailedException(message)
+        # if (target_proc.returncode is not None) and (target_proc.returncode > 0):
+        #     message = "Target failed to run"
+        #     raise PipelineExecutionFailedException(message)
 
         print("Finished pipeline execution")
