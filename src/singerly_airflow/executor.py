@@ -49,7 +49,7 @@ class Executor:
     async def process_stream_queue(self, writer: asyncio.StreamWriter):
         while True:
             line = await self.stream_queue.get()
-            print("[STR] Got line", line)
+            # print("[STR] Got line", line)
             if not line:
                 break
             try:
