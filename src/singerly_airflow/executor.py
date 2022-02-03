@@ -49,7 +49,7 @@ class Executor:
     async def process_stream_queue(self, writer: asyncio.StreamWriter):
         while True:
             line = await self.stream_queue.get()
-            # print("[STR] Got line", line)
+            print("[STR] Got line", line)
             if not line:
                 break
             try:
@@ -189,11 +189,14 @@ class Executor:
             process_logs_task,
         )
 
-        stream_tasks = asyncio.gather(
-            target_stream_enqueue_task,
-            target_state_enqueue_task,
+        tap_stream_tasks = asyncio.gather(
             process_stream_task,
             process_state_task,
+        )
+
+        target_stream_tasks = asyncio.gather(
+            target_stream_enqueue_task,
+            target_state_enqueue_task,
         )
 
         state_tasks = asyncio.gather(
@@ -204,7 +207,8 @@ class Executor:
         # asyncio.create_task(self.check_target_process(target_proc))
 
         await asyncio.wait(
-            [stream_tasks, state_tasks], return_when=asyncio.ALL_COMPLETED
+            [tap_stream_tasks, target_stream_tasks, state_tasks],
+            return_when=asyncio.ALL_COMPLETED,
         )
         print("Finished stream processing")
 
@@ -228,12 +232,12 @@ class Executor:
         logs_tasks.cancel()
         await logs_tasks
 
-        if tap_proc.returncode > 0 or target_proc.returncode > 0:
-            message = (
-                "Tap failed to run"
-                if tap_proc.returncode > 0
-                else "Target failed to run"
-            )
+        if (tap_proc.returncode is not None) and (tap_proc.returncode > 0):
+            message = "Tap failed to run"
+            raise PipelineExecutionFailedException(message)
+
+        if (target_proc.returncode is not None) and (target_proc.returncode > 0):
+            message = "Target failed to run"
             raise PipelineExecutionFailedException(message)
 
         print("Finished pipeline execution")
