@@ -59,7 +59,7 @@ class Executor:
                 # print(f"[Stream]", line.decode("utf-8"))
                 writer.write(line)
                 await writer.drain()
-            except (BrokenPipeError, ConnectionResetError):
+            except (BrokenPipeError, ConnectionResetError, OSError):
                 with suppress(AttributeError):
                     writer.close()
                     await writer.wait_closed()
