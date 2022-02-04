@@ -117,8 +117,8 @@ class Executor:
         if not self.pipeline.is_valid():
             return
         os.chdir(self.work_dir)
-        self.logs_queue = asyncio.Queue(maxsize=100)
-        self.stream_queue = asyncio.Queue(maxsize=50)
+        self.logs_queue = asyncio.Queue(maxsize=10)
+        self.stream_queue = asyncio.Queue(maxsize=10)
         self.state_queue = asyncio.Queue()
 
         await self.install_connectors()
@@ -160,14 +160,14 @@ class Executor:
             *tap_run_args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            limit=5 * 1024 * 1024,
+            limit=1 * 1024 * 1024,
         )
         target_proc = await asyncio.subprocess.create_subprocess_exec(
             *target_run_args,
             stdout=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            limit=5 * 1024 * 1024,
+            limit=1 * 1024 * 1024,
         )
 
         tap_logs_enqueue_task = asyncio.create_task(
@@ -265,6 +265,7 @@ class Executor:
         else:  # if tap_process_future in done:
             # If the tap completes before the target, the target should have a chance to process all tap output
             tap_code = tap_future.result()
+            # await self.stream_queue.put(None)
 
             # Wait for all buffered tap output to be processed
             await asyncio.wait([tap_stream_tasks, tap_logs_enqueue_task])
@@ -275,7 +276,7 @@ class Executor:
                 await target_proc.stdin.wait_closed()
 
             # Wait for all buffered target output to be processed
-            await asyncio.wait([target_stream_tasks])
+            await asyncio.wait([target_stream_tasks, target_state_enqueue_task])
 
             # Wait for target to complete
             target_code = await target_future
