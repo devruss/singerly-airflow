@@ -4,6 +4,8 @@ from typing import List
 import boto3
 import os
 from dataclasses import dataclass
+
+from pendulum import datetime, now
 from singerly_airflow.utils import timed_lru_cache, get_package_name
 from singerly_airflow.venv import Venv
 import asyncio
@@ -30,6 +32,7 @@ class Pipeline:
     uploaded_files: str = ""
     is_enabled: bool = False
     schedule: str = "@dayli"
+    start_date: str = now().isoformat()
 
     def save_state(self) -> None:
         dynamodb = boto3.resource("dynamodb")

@@ -1,4 +1,5 @@
 import datetime
+import pendulum
 from multiprocessing import Pipe
 from airflow.utils import timezone
 from airflow.utils.email import send_email_smtp
@@ -58,7 +59,7 @@ def build_dag(pipeline: Pipeline) -> DAG:
         default_args={
             **default_args,
             "email": pipeline.get_email_list(),
-            "start_date": pipeline.created_at,
+            "start_date": pendulum.parse(pipeline.start_date),
         },
         is_paused_upon_creation=(not pipeline.is_enabled),
     )
