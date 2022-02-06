@@ -51,6 +51,7 @@ class Executor:
 
     async def process_stream_queue(self, writer: asyncio.StreamWriter):
         while True:
+            # print(f"{self.stream_queue.qsize()} items in queue")
             line = await self.stream_queue.get()
             # print("[STR] Got line", line)
             if not line:
@@ -59,7 +60,7 @@ class Executor:
                 # print(f"[Stream]", line.decode("utf-8"))
                 writer.write(line)
                 await writer.drain()
-            except (BrokenPipeError, ConnectionResetError, OSError):
+            except (BrokenPipeError, ConnectionResetError):
                 with suppress(AttributeError):
                     writer.close()
                     await writer.wait_closed()
@@ -118,7 +119,7 @@ class Executor:
             return
         os.chdir(self.work_dir)
         self.logs_queue = asyncio.Queue(maxsize=10)
-        self.stream_queue = asyncio.Queue(maxsize=10)
+        self.stream_queue = asyncio.Queue(maxsize=1)
         self.state_queue = asyncio.Queue()
 
         await self.install_connectors()
@@ -160,14 +161,14 @@ class Executor:
             *tap_run_args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            limit=1 * 1024 * 1024,
+            limit=10 * 1024 * 1024,
         )
         target_proc = await asyncio.subprocess.create_subprocess_exec(
             *target_run_args,
             stdout=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            limit=1 * 1024 * 1024,
+            limit=10 * 1024 * 1024,
         )
 
         tap_logs_enqueue_task = asyncio.create_task(

@@ -3,3 +3,4 @@ __pycache__
 test.py
 build
 singerly_airflow.egg-info/SOURCES.txt
+.python-version
