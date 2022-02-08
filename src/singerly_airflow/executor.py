@@ -60,15 +60,14 @@ class Executor:
                 # print(f"[Stream]", line.decode("utf-8"))
                 writer.write(line)
                 await writer.drain()
-            except (BrokenPipeError, ConnectionResetError):
+            except (BrokenPipeError, ConnectionResetError, Exception):
                 with suppress(AttributeError):
                     writer.close()
                     await writer.wait_closed()
-                    return
+                return
         with suppress(AttributeError):
             writer.close()
             await writer.wait_closed()
-            return
 
     async def process_state_queue(self):
         while True:
