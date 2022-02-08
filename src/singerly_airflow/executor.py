@@ -75,9 +75,10 @@ class Executor:
             if not line:
                 break
             with suppress(AttributeError):
-                line_decoded = line.decode("utf-8").splitlines()[-1]
+                line_decoded = line.decode("utf-8").strip()
                 if line_decoded:
                     self.pipeline.pipeline_state = line_decoded
+                    self.pipeline.save_state()
 
     async def install_connectors(self):
         print(f"Installing source connector: {get_package_name(self.pipeline.tap_url)}")
