@@ -64,7 +64,17 @@ def build_dag(pipeline: Pipeline) -> DAG:
         is_paused_upon_creation=(not pipeline.is_enabled),
     )
     with dag:
-        singerly_task = SingerlyOperator(task_id=pipeline.name, pipeline_id=pipeline.id)
+        singerly_task = SingerlyOperator(
+            task_id=pipeline.name,
+            pipeline_id=pipeline.id,
+            executor_config={
+                "KubernetesExecutor": {
+                    "request_cpu": "1",
+                    "request_memory": "1024Mi",
+                    "limit_memory": "1024Mi",
+                }
+            },
+        )
         if pipeline.get_email_list():
             email_notification = EmailOperator(
                 task_id="email_notification",
