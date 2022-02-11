@@ -69,9 +69,10 @@ def build_dag(pipeline: Pipeline) -> DAG:
             pipeline_id=pipeline.id,
             executor_config={
                 "KubernetesExecutor": {
-                    "request_cpu": "1",
-                    "request_memory": "1024Mi",
-                    "limit_memory": "1024Mi",
+                    "request_cpu": pipeline.cpu_limit,
+                    "request_memory": pipeline.memory_limit,
+                    "limit_cpu": pipeline.cpu_limit,
+                    "limit_memory": pipeline.memory_limit,
                 }
             },
         )

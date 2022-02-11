@@ -32,6 +32,8 @@ class Pipeline:
     uploaded_files: str = ""
     is_enabled: bool = False
     schedule: str = "@dayli"
+    cpu_limit: str = "900m"
+    memory_limit: str = "3.8Gi"
     start_date: str = now().isoformat()
 
     def save_state(self) -> None:
