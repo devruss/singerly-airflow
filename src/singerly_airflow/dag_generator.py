@@ -73,6 +73,7 @@ def build_dag(pipeline: Pipeline) -> DAG:
                     "request_memory": pipeline.memory_limit,
                     "limit_cpu": pipeline.cpu_limit,
                     "limit_memory": pipeline.memory_limit,
+                    "labels": {"instance_type": pipeline.instance_type},
                 }
             },
         )

@@ -34,6 +34,7 @@ class Pipeline:
     schedule: str = "@dayli"
     cpu_limit: str = "900m"
     memory_limit: str = "3.8Gi"
+    instance_type: str = "sm"
     start_date: str = now().isoformat()
 
     def save_state(self) -> None:
