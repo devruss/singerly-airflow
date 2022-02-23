@@ -78,8 +78,8 @@ def build_dag(pipeline: Pipeline) -> DAG:
             },
         )
         if pipeline.get_email_list():
-            email_notification = EmailOperator(
-                task_id="email_notification",
+            success_email = EmailOperator(
+                task_id="email_success",
                 trigger_rule="all_success",
                 to=pipeline.get_email_list(),
                 subject="""[Airflow] DAG {{ task_instance_key_str.split('__')[0] }}: Success""",
@@ -88,7 +88,18 @@ def build_dag(pipeline: Pipeline) -> DAG:
         Succeeded on: {{ macros.datetime.now() }}
         """,
             )
-            singerly_task >> email_notification
+            failure_email = EmailOperator(
+                task_id="email_failure",
+                trigger_rule="all_failed",
+                to=pipeline.get_email_list(),
+                subject="""[Airflow] DAG {{ task_instance_key_str.split('__')[0] }}: Failed""",
+                html_content="""
+        DAG: <b>{{ task_instance_key_str.split('__')[0] }}</b><br>
+        Failed on: {{ macros.datetime.now() }}
+        Please follow the <a href="{{ ti.log_url }}">link</a> to view the logs.
+        """,
+            )
+            singerly_task >> [success_email, failure_email]
         else:
             singerly_task
     return dag
